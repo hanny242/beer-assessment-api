@@ -17,11 +17,15 @@ router.get('/', (req, res) => {
     if (req.query.styleId){
         requestUrl = requestUrl + `&styleId=${req.query.styleId}`
     }
-
     request({
         uri: requestUrl
     }, function (error, response, body) { 
+        debugger;
         parsedResponse = JSON.parse(response.body);
+        if(parsedResponse.data === undefined){
+            res.body = [];
+            return;
+        }
 
         beers = parsedResponse.data.map(function(beer) {
             return {            

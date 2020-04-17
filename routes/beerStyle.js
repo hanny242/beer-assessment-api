@@ -18,7 +18,7 @@ router.get('/', (req, res) => {
         styles = parsedResponse.data.map(function(style) {
             return {            
                 id: style.id,
-                type: style.name,
+                name: style.name,
                 description: style.description,
         }});
 
