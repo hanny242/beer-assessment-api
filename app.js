@@ -22,7 +22,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/beers', beersRouter);
-//app.use('/country', countryRouter);
+app.use('/locations', countryRouter);
 app.use('/styles', styleRouter);
 
 
