@@ -4,11 +4,12 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
 var beersRouter = require('./routes/beers');
-var countryRouter = require('./routes/beerCountry');
+var countryRouter = require('./routes/beerCountries');
 var styleRouter = require('./routes/beerStyle');
 
 var app = express();
 
+//added header because BreweryDB does not support CORS
 app.use(function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");

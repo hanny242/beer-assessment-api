@@ -6,6 +6,8 @@ const dotenv = require('dotenv');
 dotenv.config();
 const apiKey = process.env.API_KEY;
 
+
+//get request for beers, beer search, beer style, and beer country
 router.get('/', (req, res) => {
     requestUrl = `https://sandbox-api.brewerydb.com/v2/beers/?key=${apiKey}`;
 
@@ -17,17 +19,18 @@ router.get('/', (req, res) => {
     if (req.query.styleId) {
         requestUrl = requestUrl + `&styleId=${req.query.styleId}`
     }
+
+    //get breweryIds from locations with certain countryCode
     if (req.query.countryCode) {
         request({
             uri: `https://sandbox-api.brewerydb.com/v2/locations/?key=${apiKey}&countryIsoCode=${req.query.countryCode}`
-        }, function (error, response, body) { 
-            debugger;
+        }, function (error, response, body) {
             parsedResponse = JSON.parse(response.body);
             if(parsedResponse.data === undefined){
                 breweryIds = [];
                 return;
             }
-            
+            debugger;
             // Make distinct array of breweryIds
             breweryIds = [...new Set(parsedResponse.data.map(l => l.breweryId))];
     
@@ -37,16 +40,22 @@ router.get('/', (req, res) => {
     }
     request({
         uri: requestUrl
-    }, function (error, response, body) { 
-        debugger;
+    }, function (error, response, body) {
         parsedResponse = JSON.parse(response.body);
+
+
+        debugger;
+
         if(parsedResponse.data === undefined){
             res.body = [];
             return;
         }
 
+        //get beers from breweries with certain countryCode
+
         if (breweryIds) {
             parsedResponse.data = parsedResponse.data.filter(beer => {
+                debugger;
                 return beer.breweries.filter(brewery => breweryIds.includes(brewery.id)).length > 0
             })
         }

@@ -17,7 +17,7 @@ router.get("/", async (req, res) => {
     async (error, response, body) => {
       let parsedResponse = JSON.parse(response.body);
 
-      let countriesWithBreweries = Array.from(
+      let countries = Array.from(
         new Set(parsedResponse.data.map((l) => l.countryIsoCode))
       ).map((countryIsoCode) => {
         return {
@@ -34,44 +34,33 @@ router.get("/", async (req, res) => {
           ),
         };
       });
+      if (req.query.countryCode) {
+        countries
+          .filter((c) => c.isoCode === req.query.countryCode)[0]
+          .breweryIds.forEach((breweryId) => {
+            request(
+              {
+                uri: `https://sandbox-api.brewerydb.com/v2/brewery/${breweryId}/beers/?key=${apiKey}`,
+              },
+              function (error, response, body) {
+                parsedResponse = JSON.parse(response.body);
 
-      countriesWithBreweries = await getCountriesWithBeers(countriesWithBreweries);
-      debugger;
-      const countries = countriesWithBreweries.map((c) => {
-        return {
-          isoCode: c.isoCode,
-          name: c.name,
-        };
-      });
+                beersPerCountry = parsedResponse.data.map(function (beers) {
+                  return {
+                    id: beers.id,
+                    name: beers.name,
+                  };
+                });
+
+                res.json(beers);
+              }
+            );
+          });
+      }
+
       res.json(countries);
     }
   );
 });
-
-const asyncFilter = async (arr, predicate) => {
-	const results = await Promise.all(arr.map(predicate));
-
-	return arr.filter((_v, index) => results[index]);
-}
-
-async function getCountriesWithBeers(countriesWithBreweries) {
-  return await asyncFilter(countriesWithBreweries, async (c) => {
-    let countryHasBeers = false;
-    for (const breweryId of c.breweryIds) {
-      if (countryHasBeers) {
-        break;
-      }
-
-      await rp(
-        `https://sandbox-api.brewerydb.com/v2/brewery/${breweryId}/beers/?key=${apiKey}`
-      ).then(async (body) => {
-        let parsedResponse = JSON.parse(body);
-        countryHasBeers = parsedResponse.data.length > 1;
-      });
-    }
-    debugger;
-    return countryHasBeers;
-  });
-}
 
 module.exports = router;
