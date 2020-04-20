@@ -9,7 +9,7 @@ const apiKey = process.env.API_KEY;
 
 //get request for beers, beer search, beer style, and beer country
 router.get('/', (req, res) => {
-    requestUrl = `https://sandbox-api.brewerydb.com/v2/beers/?key=${apiKey}`;
+    requestUrl = `https://sandbox-api.brewerydb.com/v2/beers/?key=${apiKey}p=${req.query.page}`;
 
     let breweryIds = null;
 
@@ -61,8 +61,14 @@ router.get('/', (req, res) => {
         }
 
         beers = mapBeers(parsedResponse.data)
+        const numberOfPages = parsedResponse.numberOfPages;
 
-        res.json(beers);
+
+
+        res.json({
+            beers,
+            numberOfPages
+        });
     });    
 });
 
