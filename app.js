@@ -4,7 +4,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
 var beersRouter = require('./routes/beers');
-var countryRouter = require('./routes/beerCountries');
+var countryRouter = require('./routes/beerCountry');
 var styleRouter = require('./routes/beerStyle');
 
 var app = express();
@@ -23,7 +23,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/beers', beersRouter);
-app.use('/locations', countryRouter);
+app.use('/countries', countryRouter);
 app.use('/styles', styleRouter);
 
 

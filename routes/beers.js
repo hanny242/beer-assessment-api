@@ -1,84 +1,119 @@
-var express = require('express');
+var express = require("express");
 var router = express.Router();
-var request = require('request');
-var bodyParser = require('body-parser')
-const dotenv = require('dotenv');
+var request = require("request");
+var rp = require("request-promise-native");
+var bodyParser = require("body-parser");
+const dotenv = require("dotenv");
 dotenv.config();
 const apiKey = process.env.API_KEY;
 
-
 //get request for beers, beer search, beer style, and beer country
-router.get('/', (req, res) => {
-    requestUrl = `https://sandbox-api.brewerydb.com/v2/beers/?key=${apiKey}p=${req.query.page}`;
+router.get("/", async (req, res) => {
+  if (!req.query.page) {
+    req.query.page = 1;
+  }
+  requestUrl = `https://sandbox-api.brewerydb.com/v2/beers/?key=${apiKey}&p=${req.query.page}`;
 
-    let breweryIds = null;
+  let breweryIds = null;
 
-    if (req.query.name) {
-        requestUrl = requestUrl + `&name=${req.query.name}`
-    }
-    if (req.query.styleId) {
-        requestUrl = requestUrl + `&styleId=${req.query.styleId}`
-    }
+  if (req.query.name) {
+    requestUrl = `https://sandbox-api.brewerydb.com/v2/search/?key=${apiKey}&q=${req.query.name}&type=beer`;
+  }
+  if (req.query.styleId) {
+    requestUrl = requestUrl + `&styleId=${req.query.styleId}`;
+  }
 
-    //get breweryIds from locations with certain countryCode
-    if (req.query.countryCode) {
-        request({
-            uri: `https://sandbox-api.brewerydb.com/v2/locations/?key=${apiKey}&countryIsoCode=${req.query.countryCode}`
-        }, function (error, response, body) {
-            parsedResponse = JSON.parse(response.body);
-            if(parsedResponse.data === undefined){
-                breweryIds = [];
-                return;
-            }
-            debugger;
-            // Make distinct array of breweryIds
-            breweryIds = [...new Set(parsedResponse.data.map(l => l.breweryId))];
-    
-        });    
-
-        requestUrl = requestUrl + '&withBreweries=Y';
-    }
-    request({
-        uri: requestUrl
-    }, function (error, response, body) {
+  //get breweryIds from locations with certain countryCode
+  if (req.query.countryCode) {
+    request(
+      {
+        uri: `https://sandbox-api.brewerydb.com/v2/locations/?key=${apiKey}&countryIsoCode=${req.query.countryCode}`,
+      },
+      async function (error, response, body) {
         parsedResponse = JSON.parse(response.body);
-
-
+        if (parsedResponse.data === undefined) {
+          breweryIds = [];
+          return;
+        }
+        // Make distinct array of breweryIds
+        breweryIds = [...new Set(parsedResponse.data.map((l) => l.breweryId))];
+        debugger;
+        // TODO: Handle pages for country
+        beers = await getBeersFromBreweries(breweryIds, req.query.page);
         debugger;
 
-        if(parsedResponse.data === undefined){
-            res.body = [];
-            return;
-        }
+        res.json(beers);
+      }
+    );
 
-        //get beers from breweries with certain countryCode
+    return;
+  }
+  request(
+    {
+      uri: requestUrl,
+    },
+    function (error, response, body) {
+      parsedResponse = JSON.parse(response.body);
 
-        if (breweryIds) {
-            parsedResponse.data = parsedResponse.data.filter(beer => {
-                debugger;
-                return beer.breweries.filter(brewery => breweryIds.includes(brewery.id)).length > 0
-            })
-        }
+      if (parsedResponse.data === undefined) {
+        res.body = [];
+        return;
+      }
 
-        beers = mapBeers(parsedResponse.data)
-        const numberOfPages = parsedResponse.numberOfPages;
+      beers = mapBeers(parsedResponse.data);
 
-
-
-        res.json({
-            beers,
-            numberOfPages
-        });
-    });    
+      res.json(beers);
+    }
+  );
 });
 
 function mapBeers(data) {
-    return data.map(beer => {
-        return {            
+  return data.map((beer) => {
+    return {
+      id: beer.id,
+      name: beer.name,
+      styleId: beer.styleId,
+    };
+  });
+}
+
+async function getBeersFromBreweries(breweryIds, pageNumber) {
+  let result = [];
+  const pageSize = 50;
+  const maxSearchCount = pageNumber * pageSize;
+  debugger;
+  const map = new Map();
+  for (const breweryId of breweryIds) {
+    await rp(
+      `https://sandbox-api.brewerydb.com/v2/brewery/${breweryId}/beers/?key=${apiKey}`
+    ).then(async (body) => {
+      let parsedResponse = JSON.parse(body);
+
+      for (const beer of parsedResponse.data) {
+        if (!map.has(beer.id)) {
+          map.set(beer.id, true);
+          result.push({
             id: beer.id,
             name: beer.name,
-            styleId: beer.styleId
-    }});
+          });
+        }
+        if (result.length >= maxSearchCount) {
+          debugger;
+          if (pageNumber > 1) {
+            result.splice(0, maxSearchCount - pageSize);
+          }
+          break;
+        }
+      }
+    });
+    if (result.length >= maxSearchCount) {
+      debugger;
+      // Remove all the elements in the array except the page we are on
+      break;
+    }
+  }
+
+  return result;
 }
 
 module.exports = router;
